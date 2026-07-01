@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 
 # ==========================================
 # 1. PAGE CONFIGURATION & SETUP
@@ -146,10 +147,10 @@ def calculate_public_rental_cost(gross_wage):
     elif 800 < gross_wage <= 1500: return 90.00
     else: return 500.00
 
-def calculate_net_cash(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn):
+def calculate_net_cash(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio):
     """The dynamic Master Engine mapping the Bundle Collapse."""
     cpf_deduction = calculate_employee_cpf(gross_wage, age)
-    wis_cash = calculate_wis_cash(gross_wage, age) 
+    wis_cash = calculate_wis_cash(gross_wage, age, wis_cash_ratio) 
     comcare = calculate_comcare(gross_wage, household_size, comcare_tier, taper_rate)
     baby_bonus = calculate_baby_bonus_monthly(has_newborn)
     
@@ -163,21 +164,21 @@ def calculate_net_cash(gross_wage, household_size, age, archetype, comcare_tier,
     else:
         return take_home - calculate_public_rental_cost(gross_wage)
 
-def calculate_emtr(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, step=100):
+def calculate_emtr(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio, step=100):
     if gross_wage == 0: return 0.0
-    net_current = calculate_net_cash(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn)
-    net_simulated = calculate_net_cash(gross_wage + step, household_size, age, archetype, comcare_tier, taper_rate, has_newborn)
+    net_current = calculate_net_cash(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio)
+    net_simulated = calculate_net_cash(gross_wage + step, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio)
     
     delta_gross = step
     delta_net = net_simulated - net_current
     return 1.0 - (delta_net / delta_gross)
 
-def calculate_wdr(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, step=100):
+def calculate_wdr(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio, step=100):
     if gross_wage == 0: return 0.0
     
     def get_components(wage):
         cpf = calculate_employee_cpf(wage, age)
-        wis = calculate_wis_cash(wage, age)
+        wis = calculate_wis_cash(wage, age, wis_cash_ratio)
         comcare = calculate_comcare(wage, household_size, comcare_tier, taper_rate)
         
         if "Families" in archetype:
@@ -202,7 +203,7 @@ data = []
 mis_baseline = 1680 * household_size 
 
 for w in wage_range:
-    net = calculate_net_cash(w, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn)
+    net = calculate_net_cash(w, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn, wis_cash_ratio)
     data.append({
         "Gross Wage": w, 
         "Net Disposable Cash": net,
@@ -212,9 +213,9 @@ for w in wage_range:
 df = pd.DataFrame(data)
 
 # Process current metrics ONCE
-current_net_cash = calculate_net_cash(selected_wage, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn)
-current_emtr = calculate_emtr(selected_wage, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn, step=100)
-current_wdr = calculate_wdr(selected_wage, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn, step=100)
+current_net_cash = calculate_net_cash(selected_wage, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn, wis_cash_ratio)
+current_emtr = calculate_emtr(selected_wage, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn, wis_cash_ratio, step=100)
+current_wdr = calculate_wdr(selected_wage, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn, wis_cash_ratio, step=100)
 
 emtr_percentage = current_emtr * 100 
 wdr_percentage = current_wdr * 100
@@ -225,6 +226,7 @@ wdr_percentage = current_wdr * 100
 col1, col2, col3, col4 = st.columns(4)
 col1.metric(label="Selected Gross Wage", value=f"${selected_wage:,.2f}")
 col2.metric(label="Net Disposable Cash", value=f"${current_net_cash:,.2f}")
+col4.metric(label="Welfare Dependence Rate", value=f"{wdr_percentage:.1f}%")
 
 if emtr_percentage >= 100:
     col3.metric(label="Marginal Tax Rate (EMTR)", value=f"{emtr_percentage:.1f}%", delta="CRITICAL CLIFF", delta_color="inverse")
@@ -234,8 +236,6 @@ else:
     col3.metric(label="Marginal Tax Rate (EMTR)", value=f"{emtr_percentage:.1f}%", delta="Healthy", delta_color="normal")
 
 st.divider()
-
-import plotly.express as px
 
 # The Main Visualizer
 st.subheader("The Welfare Cliff Visualized")
@@ -260,12 +260,13 @@ fig.update_traces(hovertemplate="%{y:,.2f}<extra></extra>")
 
 # Render the interactive chart in Streamlit
 st.plotly_chart(fig, use_container_width=True)
+
 # Deep Dive Data
 tab1, tab2 = st.tabs(["Policy Breakdown", "Raw Data Engine"])
 with tab1:
     st.write(f"### Financial Baseline at ${selected_wage} Gross Wage")
     st.write(f"* **Employee CPF Deduction:** -${calculate_employee_cpf(selected_wage, worker_age):.2f}")
-    st.write(f"* **WIS Cash Received:** +${calculate_wis_cash(selected_wage, worker_age):.2f}")
+    st.write(f"* **WIS Cash Received:** +${calculate_wis_cash(selected_wage, worker_age, wis_cash_ratio):.2f}")
     st.write(f"* **ComCare Received:** +${calculate_comcare(selected_wage, household_size, comcare_tier, comcare_taper):.2f}")
     if has_newborn:
         st.write(f"* **Baby Bonus Cash Received:** +${calculate_baby_bonus_monthly(has_newborn):.2f}")
