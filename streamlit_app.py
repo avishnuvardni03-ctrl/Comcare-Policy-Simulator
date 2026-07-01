@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 
 # ==========================================
 # 1. PAGE CONFIGURATION & SETUP
@@ -239,27 +238,8 @@ st.divider()
 
 # The Main Visualizer
 st.subheader("The Welfare Cliff Visualized")
-st.markdown("The blue line maps Net Cash against Gross Wages. The red line indicates the Minimum Income Standard (MIS).")
-
-# Create a Plotly figure for precise tooltip control
-fig = px.line(
-    df, 
-    x="Gross Wage", 
-    y=["Net Disposable Cash", "MIS Basic Cost of Living"],
-    color_discrete_sequence=["#1f77b4", "#ff0000"]
-)
-
-# Rename the axes and hover tooltips for a professional finish
-fig.update_layout(
-    xaxis_title="Gross Monthly Wage ($)",
-    yaxis_title="Amount ($)",
-    hovermode="x unified", # Creates a single vertical line to compare both metrics instantly
-    legend_title_text="Metric"
-)
-fig.update_traces(hovertemplate="%{y:,.2f}<extra></extra>")
-
-# Render the interactive chart in Streamlit
-st.plotly_chart(fig, use_container_width=True)
+st.markdown("The chart maps Net Cash against Gross Wages. A sharp downward drop indicates the cliff where specific safety nets are withdrawn.")
+st.line_chart(df.set_index("Gross Wage"))
 
 # Deep Dive Data
 tab1, tab2 = st.tabs(["Policy Breakdown", "Raw Data Engine"])
