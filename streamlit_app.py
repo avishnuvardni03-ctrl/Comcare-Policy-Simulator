@@ -197,19 +197,16 @@ def calculate_wdr(gross_wage, household_size, age, archetype, comcare_tier, tape
 # ==========================================
 # 4. DATA GENERATION (BUILDING THE CURVE)
 # ==========================================
-# Calculate the MIS baseline dynamically based on current slider inputs
-mis_baseline_value = 1680 * household_size 
-
-wage_range = list(range(0, 3550, 50)) 
+wage_range = list(range(0, 5550, 50)) 
 data = []
+mis_baseline = 1680 * household_size 
 
 for w in wage_range:
-    # IMPORTANT: Ensure every variable passed here matches your sidebar inputs
-    net = calculate_net_cash(w, household_size, worker_age, archetype, comcare_tier, comcare_taper)
+    net = calculate_net_cash(w, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn, wis_cash_ratio)
     data.append({
         "Gross Wage": w, 
         "Net Disposable Cash": net,
-        "MIS Basic Cost of Living": mis_baseline_value # Now dynamic
+        "MIS Basic Cost of Living": mis_baseline
     })
 
 df = pd.DataFrame(data)
