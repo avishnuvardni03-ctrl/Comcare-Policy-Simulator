@@ -163,7 +163,7 @@ def calculate_net_cash(gross_wage, household_size, age, archetype, comcare_tier,
     else:
         return take_home - calculate_public_rental_cost(gross_wage)
 
-def calculate_emtr(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio, step=100):
+def calculate_emtr(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio, step=50):
     if gross_wage == 0: return 0.0
     net_current = calculate_net_cash(gross_wage, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio)
     net_simulated = calculate_net_cash(gross_wage + step, household_size, age, archetype, comcare_tier, taper_rate, has_newborn, wis_cash_ratio)
@@ -197,16 +197,19 @@ def calculate_wdr(gross_wage, household_size, age, archetype, comcare_tier, tape
 # ==========================================
 # 4. DATA GENERATION (BUILDING THE CURVE)
 # ==========================================
-wage_range = list(range(0, 5550, 50)) 
+# Calculate the MIS baseline dynamically based on current slider inputs
+mis_baseline_value = 1680 * household_size 
+
+wage_range = list(range(0, 3550, 50)) 
 data = []
-mis_baseline = 1680 * household_size 
 
 for w in wage_range:
-    net = calculate_net_cash(w, household_size, worker_age, archetype, comcare_tier, comcare_taper, has_newborn, wis_cash_ratio)
+    # IMPORTANT: Ensure every variable passed here matches your sidebar inputs
+    net = calculate_net_cash(w, household_size, worker_age, archetype, comcare_tier, comcare_taper)
     data.append({
         "Gross Wage": w, 
         "Net Disposable Cash": net,
-        "MIS Basic Cost of Living": mis_baseline
+        "MIS Basic Cost of Living": mis_baseline_value # Now dynamic
     })
 
 df = pd.DataFrame(data)
