@@ -45,6 +45,8 @@ comcare_taper = st.slider(
     help="0.0 means the benefit never decreases. 1.0 means a 1-to-1 strict cut. A traditional cliff is an instant drop to 0."
 )
 
+wis_cash_ratio = st.slider("WIS Liquid Cash Ratio", min_value=0.0, max_value=1.0, step=0.1, value=0.4, help="Adjusts how much of the WIS payout is given in liquid cash vs. CPF.")
+
 st.divider()
 
 # ==========================================
@@ -63,16 +65,30 @@ def calculate_employee_cpf(gross_wage, age):
     else: 
         return gross_wage * rate
         
-def calculate_wis_cash(gross_wage, age):
-    """Calculates the 40% liquid cash portion of WIS."""
-    if not (500 <= gross_wage <= 3000): return 0.0
-    max_annual_wis = 3500
-    max_monthly_cash = (max_annual_wis / 12) * 0.40
+def calculate_wis_cash(gross_wage, age, wis_cash_ratio):
+    """Calculates the liquid cash portion of WIS, featuring dynamic age tiers and an adjustable cash ratio."""
+    # 1. Eligibility Check
+    if not (500 <= gross_wage <= 3000) or age < 30: 
+        return 0.0
     
-    if 500 <= gross_wage < 1200: return max_monthly_cash * ((gross_wage - 500) / (1200 - 500))
-    elif 1200 <= gross_wage <= 1500: return max_monthly_cash
-    elif 1500 < gross_wage <= 3000: return max_monthly_cash * ((3000 - gross_wage) / (3000 - 1500))
-    return 0.0
+    # 2. Dynamic Age Tiers (2025/2026 Parameters)
+    if 30 <= age <= 34: max_annual_wis = 2450
+    elif 35 <= age <= 44: max_annual_wis = 3500
+    elif 45 <= age <= 59: max_annual_wis = 4200
+    else: max_annual_wis = 4900
+        
+    # 3. The Liquidity Inversion 
+    max_monthly_cash = (max_annual_wis / 12) * wis_cash_ratio
+    
+    # 4. The WIS Bell Curve
+    if 500 <= gross_wage < 1200: 
+        return max_monthly_cash * ((gross_wage - 500) / (1200 - 500))
+    elif 1200 <= gross_wage <= 1500: 
+        return max_monthly_cash
+    elif 1500 < gross_wage <= 3000: 
+        return max_monthly_cash * ((3000 - gross_wage) / (3000 - 1500))
+    
+    return 0.00
 
 def calculate_baby_bonus_monthly(has_newborn):
     """Calculates the monthly tangible cash equivalent of the Baby Bonus."""
@@ -209,7 +225,6 @@ wdr_percentage = current_wdr * 100
 col1, col2, col3, col4 = st.columns(4)
 col1.metric(label="Selected Gross Wage", value=f"${selected_wage:,.2f}")
 col2.metric(label="Net Disposable Cash", value=f"${current_net_cash:,.2f}")
-col4.metric(label="Welfare Dependence Rate", value=f"{wdr_percentage:.1f}%")
 
 if emtr_percentage >= 100:
     col3.metric(label="Marginal Tax Rate (EMTR)", value=f"{emtr_percentage:.1f}%", delta="CRITICAL CLIFF", delta_color="inverse")
@@ -220,11 +235,31 @@ else:
 
 st.divider()
 
+import plotly.express as px
+
 # The Main Visualizer
 st.subheader("The Welfare Cliff Visualized")
-st.markdown("y-axis: Net Disposable Cash | x-axis: Gross Wages")
-st.line_chart(df.set_index("Gross Wage"), color=["#1f77b4", "#ff0000"])
+st.markdown("The blue line maps Net Cash against Gross Wages. The red line indicates the Minimum Income Standard (MIS).")
 
+# Create a Plotly figure for precise tooltip control
+fig = px.line(
+    df, 
+    x="Gross Wage", 
+    y=["Net Disposable Cash", "MIS Basic Cost of Living"],
+    color_discrete_sequence=["#1f77b4", "#ff0000"]
+)
+
+# Rename the axes and hover tooltips for a professional finish
+fig.update_layout(
+    xaxis_title="Gross Monthly Wage ($)",
+    yaxis_title="Amount ($)",
+    hovermode="x unified", # Creates a single vertical line to compare both metrics instantly
+    legend_title_text="Metric"
+)
+fig.update_traces(hovertemplate="%{y:,.2f}<extra></extra>")
+
+# Render the interactive chart in Streamlit
+st.plotly_chart(fig, use_container_width=True)
 # Deep Dive Data
 tab1, tab2 = st.tabs(["Policy Breakdown", "Raw Data Engine"])
 with tab1:
