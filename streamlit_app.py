@@ -250,8 +250,7 @@ with tab1:
     st.write(f"* **ComCare Received:** +${calculate_comcare(selected_wage, household_size, comcare_tier, comcare_taper):.2f}")
     if has_newborn:
         st.write(f"* **Baby Bonus Cash Received:** +${calculate_baby_bonus_monthly(has_newborn):.2f}")
-    st.info("Note: The Net Cash total mathematically factors in the specific out-of-pocket costs and subsidy withdrawals unique to the archetype you selected above.")
-
+    
 with tab2:
     st.write("Complete underlying dataset for all wage intervals.")
     st.dataframe(df)
