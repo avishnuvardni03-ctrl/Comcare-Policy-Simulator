@@ -5,8 +5,8 @@ import pandas as pd
 # 1. PAGE CONFIGURATION & SETUP
 # ==========================================
 st.set_page_config(page_title="Singapore Welfare Cliff Simulator", layout="wide")
-st.title("ComCare Welfare Cliff Simulator")
-st.markdown("Model the temporal and financial impact of transitioning off ComCare into employment.")
+st.title("Economic Welfare Simulator")
+st.markdown("Modelling the change in expendable income as an effect of welfare policies")
 
 # ==========================================
 # 2. INPUT LEVERS & ARCHETYPES
@@ -15,9 +15,9 @@ st.subheader("Household Parameters")
 
 # Let the researcher toggle between the three specific demographic cliffs
 archetype = st.radio("Select Household Archetype", [
-    "Lower-Income Families (Triggers Childcare & SCFA Cliffs)",
-    "Seniors Age 65+ (Triggers Silver Support & CHAS Cliffs)",
-    "Single Adults (Triggers Public Rental Scheme Cliff)"
+    "Lower-Income Families (Triggers Childcare & SCFA)",
+    "Seniors Age 65+ (Triggers Silver Support & CHAS)",
+    "Single Adults (Triggers Public Rental Scheme)"
 ])
 
 comcare_tier = st.selectbox(
@@ -29,7 +29,7 @@ comcare_tier = st.selectbox(
     ]
 )
 
-selected_wage = st.slider("Gross Monthly Wage ($)", min_value=0, max_value=5500, step=50, value=2150)
+selected_wage = st.slider("Gross Monthly Household Income ($)", min_value=0, max_value=5500, step=50, value=2150)
 
 col_a, col_b = st.columns(2)
 with col_a:
@@ -53,7 +53,7 @@ st.divider()
 # 3. MATHEMATICAL ENGINE (POLICY CONSTANTS)
 # ==========================================
 def calculate_employee_cpf(gross_wage, age):
-    """Calculates the employee CPF deduction with the 2026 phase-in."""
+    """Calculates the employee CPF deduction."""
     if age <= 55: rate = 0.20
     elif 55 < age <= 60: rate = 0.17  
     elif 60 < age <= 65: rate = 0.115
@@ -237,7 +237,7 @@ else:
 st.divider()
 
 # The Main Visualizer
-st.subheader("The Welfare Cliff Visualized")
+st.subheader("The Welfare Cliff Visualizer")
 st.markdown("The chart maps Net Cash against Gross Wages. A sharp downward drop indicates the cliff where specific safety nets are withdrawn.")
 st.line_chart(df.set_index("Gross Wage"))
 
