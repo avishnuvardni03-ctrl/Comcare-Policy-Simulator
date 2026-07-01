@@ -225,7 +225,6 @@ wdr_percentage = current_wdr * 100
 col1, col2, col3, col4 = st.columns(4)
 col1.metric(label="Selected Gross Wage", value=f"${selected_wage:,.2f}")
 col2.metric(label="Net Disposable Cash", value=f"${current_net_cash:,.2f}")
-col4.metric(label="Welfare Dependence Rate", value=f"{wdr_percentage:.1f}%")
 
 if emtr_percentage >= 100:
     col3.metric(label="Marginal Tax Rate (EMTR)", value=f"{emtr_percentage:.1f}%", delta="CRITICAL CLIFF", delta_color="inverse")
